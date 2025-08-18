@@ -37,7 +37,7 @@ jobs:
     - name: Create Kivy files
       run: |
         # 创建 main.kv 文件
-        cat > main.kv << 'EOF'
+        cat > main.kv << 'END_KV'
 #:import Toast kivymd.toast.kivytoast.toast
 #:import MDRaisedButton kivymd.uix.button.MDRaisedButton
 #:import MDTopAppBar kivymd.uix.toolbar.MDTopAppBar
@@ -177,10 +177,10 @@ BoxLayout:
             font_style: "Caption"
             halign: "center"
             color: 0.5, 0.5, 0.5, 1
-EOF
+END_KV
 
         # 创建 main.py 文件
-        cat > main.py << 'EOF'
+        cat > main.py << 'END_PY'
 import os
 import sys
 import io
@@ -210,6 +210,7 @@ class SignApp(App):
         self.status_text = "正在签到中..."
         self.progress_value = 30
         self.log_text = ""
+        self.root.ids.sign_button.disabled = True
         Clock.schedule_once(lambda dt: self.execute_sign(), 0.1)
 
     def execute_sign(self):
@@ -225,7 +226,7 @@ class SignApp(App):
                 self.status_text = "签到失败"
                 self.progress_value = 0
                 self.log_text = str(e)
-                toast("签到失败: " + str(e))
+                toast(f"签到失败: {str(e)}")
         self.root.ids.sign_button.disabled = False
 
     def show_info(self):
@@ -233,7 +234,7 @@ class SignApp(App):
 
 if __name__ == '__main__':
     SignApp().run()
-EOF
+END_PY
         
     - name: Build APK
       run: |
