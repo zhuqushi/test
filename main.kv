@@ -1,0 +1,139 @@
+#:import Toast kivymd.toast.kivytoast.toast
+
+<ProgressBar>:
+    size_hint_y: None
+    height: "10dp"
+    background_color: 0.8, 0.8, 0.8, 1
+    foreground_color: 0.2, 0.6, 1, 1
+
+<LogLabel@Label>:
+    size_hint_y: None
+    height: self.texture_size[1]
+    text_size: self.width, None
+    padding: 10, 5
+    markup: True
+    font_name: "fonts/DroidSansFallback.ttf"
+    font_size: "16sp"
+    color: 0.1, 0.1, 0.1, 1
+
+<SignButton@MDRaisedButton>:
+    size_hint_y: None
+    height: "60dp"
+    font_size: "20sp"
+    md_bg_color: 0.2, 0.6, 1, 1
+    theme_text_color: "Custom"
+    text_color: 1, 1, 1, 1
+    elevation_normal: 8
+
+BoxLayout:
+    orientation: "vertical"
+    padding: "20dp"
+    spacing: "15dp"
+    canvas.before:
+        Color:
+            rgba: 0.95, 0.95, 0.95, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    MDTopAppBar:
+        title: "校园签到助手"
+        md_bg_color: 0.2, 0.6, 1, 1
+        specific_text_color: 1, 1, 1, 1
+        elevation: 10
+        left_action_items: [["information", lambda x: app.show_info()]]
+
+    BoxLayout:
+        orientation: "vertical"
+        spacing: "10dp"
+        padding: "15dp"
+        size_hint_y: None
+        height: "120dp"
+        canvas.before:
+            Color:
+                rgba: 1, 1, 1, 1
+            RoundedRectangle:
+                pos: self.pos
+                size: self.size
+                radius: [15,]
+            Color:
+                rgba: 0.9, 0.95, 1, 1
+            Line:
+                rounded_rectangle: [self.x, self.y, self.width, self.height, 15]
+                width: 1.5
+
+        MDLabel:
+            text: "当前状态:"
+            font_style: "Caption"
+            size_hint_y: None
+            height: self.texture_size[1]
+            color: 0.4, 0.4, 0.4, 1
+
+        MDLabel:
+            id: status_label
+            text: "准备就绪"
+            font_style: "H6"
+            bold: True
+            halign: "center"
+            color: 0, 0.4, 0.8, 1
+
+        ProgressBar:
+            id: progress_bar
+            max: 100
+            value: 0
+
+    SignButton:
+        id: sign_button
+        text: "开始签到"
+        on_press: app.run_sign()
+        disabled: False
+
+    ScrollView:
+        effect_cls: "ScrollEffect"
+        bar_width: "8dp"
+        scroll_type: ['bars', 'content']
+
+        GridLayout:
+            id: log_container
+            cols: 1
+            size_hint_y: None
+            height: self.minimum_height
+            padding: "10dp"
+            spacing: "5dp"
+            canvas.before:
+                Color:
+                    rgba: 1, 1, 1, 1
+                RoundedRectangle:
+                    pos: self.pos
+                    size: self.size
+                    radius: [15,]
+                Color:
+                    rgba: 0.85, 0.85, 0.85, 1
+                Line:
+                    rounded_rectangle: [self.x, self.y, self.width, self.height, 15]
+                    width: 1.2
+
+            MDLabel:
+                text: "[b]操作日志:[/b]"
+                font_style: "Caption"
+                markup: True
+                size_hint_y: None
+                height: self.texture_size[1]
+                color: 0.3, 0.3, 0.3, 1
+
+            LogLabel:
+                id: log_label
+                text: "等待签到操作..."
+                color: 0.2, 0.2, 0.2, 1
+
+    BoxLayout:
+        size_hint_y: None
+        height: "40dp"
+        padding: "0dp", "5dp"
+        spacing: "10dp"
+
+        MDLabel:
+            text: "v1.0.0 | © 2023"
+            font_style: "Caption"
+            halign: "center"
+            color: 0.5, 0.5, 0.5, 1
