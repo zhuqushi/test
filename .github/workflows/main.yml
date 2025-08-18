@@ -1,0 +1,248 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    container: 
+      image: crazymax/buildozer:latest
+      options: --privileged
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python environment
+      run: |
+        apt-get update
+        apt-get install -y python3-pip
+        pip3 install --upgrade buildozer cython virtualenv kivymd
+        
+    - name: Create Buildozer spec
+      run: |
+        buildozer init
+        sed -i "s|title = My Application|title = 签到助手|" buildozer.spec
+        sed -i "s|package.name = myapp|package.name = signhelper|" buildozer.spec
+        sed -i "s|package.domain = org.test|package.domain = com.chaoxing|" buildozer.spec
+        sed -i "s|# source.include_exts = py,png,jpg,kv,atlas|source.include_exts = py|" buildozer.spec
+        sed -i "s|requirements = |requirements = kivy, kivymd, requests, pycryptodome|" buildozer.spec
+        sed -i "s|# android.permissions = |android.permissions = INTERNET|" buildozer.spec
+        echo "android.api = 33" >> buildozer.spec
+        echo "log_level = 2" >> buildozer.spec
+        
+    - name: Create Kivy files
+      run: |
+        # 创建 main.kv 文件
+        cat > main.kv << 'END_KV'
+#:import Toast kivymd.toast.kivytoast.toast
+#:import MDRaisedButton kivymd.uix.button.MDRaisedButton
+#:import MDTopAppBar kivymd.uix.toolbar.MDTopAppBar
+#:import MDLabel kivymd.uix.label.MDLabel
+
+<ProgressBar>:
+    size_hint_y: None
+    height: "10dp"
+    background_color: 0.8, 0.8, 0.8, 1
+    foreground_color: 0.2, 0.6, 1, 1
+
+<LogLabel@MDLabel>:
+    size_hint_y: None
+    height: self.texture_size[1]
+    text_size: self.width, None
+    padding: 10, 5
+    markup: True
+    font_size: "16sp"
+    color: 0.1, 0.1, 0.1, 1
+
+BoxLayout:
+    orientation: "vertical"
+    padding: "20dp"
+    spacing: "15dp"
+    canvas.before:
+        Color:
+            rgba: 0.95, 0.95, 0.95, 1
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    MDTopAppBar:
+        title: "校园签到助手"
+        md_bg_color: 0.2, 0.6, 1, 1
+        specific_text_color: 1, 1, 1, 1
+        elevation: 10
+        left_action_items: [["information", lambda x: app.show_info()]]
+
+    BoxLayout:
+        orientation: "vertical"
+        spacing: "10dp"
+        padding: "15dp"
+        size_hint_y: None
+        height: "120dp"
+        canvas.before:
+            Color:
+                rgba: 1, 1, 1, 1
+            RoundedRectangle:
+                pos: self.pos
+                size: self.size
+                radius: [15,]
+            Color:
+                rgba: 0.9, 0.95, 1, 1
+            Line:
+                rounded_rectangle: [self.x, self.y, self.width, self.height, 15]
+                width: 1.5
+
+        MDLabel:
+            text: "当前状态:"
+            font_style: "Caption"
+            size_hint_y: None
+            height: self.texture_size[1]
+            color: 0.4, 0.4, 0.4, 1
+
+        MDLabel:
+            id: status_label
+            text: "准备就绪"
+            font_style: "H6"
+            bold: True
+            halign: "center"
+            color: 0, 0.4, 0.8, 1
+
+        ProgressBar:
+            id: progress_bar
+            max: 100
+            value: 0
+
+    MDRaisedButton:
+        id: sign_button
+        text: "开始签到"
+        on_press: app.run_sign()
+        disabled: False
+        size_hint_y: None
+        height: "60dp"
+        font_size: "20sp"
+        md_bg_color: 0.2, 0.6, 1, 1
+        theme_text_color: "Custom"
+        text_color: 1, 1, 1, 1
+        elevation_normal: 8
+
+    ScrollView:
+        effect_cls: "ScrollEffect"
+        bar_width: "8dp"
+        scroll_type: ['bars', 'content']
+
+        GridLayout:
+            id: log_container
+            cols: 1
+            size_hint_y: None
+            height: self.minimum_height
+            padding: "10dp"
+            spacing: "5dp"
+            canvas.before:
+                Color:
+                    rgba: 1, 1, 1, 1
+                RoundedRectangle:
+                    pos: self.pos
+                    size: self.size
+                    radius: [15,]
+                Color:
+                    rgba: 0.85, 0.85, 0.85, 1
+                Line:
+                    rounded_rectangle: [self.x, self.y, self.width, self.height, 15]
+                    width: 1.2
+
+            MDLabel:
+                text: "[b]操作日志:[/b]"
+                font_style: "Caption"
+                markup: True
+                size_hint_y: None
+                height: self.texture_size[1]
+                color: 0.3, 0.3, 0.3, 1
+
+            LogLabel:
+                id: log_label
+                text: "等待签到操作..."
+                color: 0.2, 0.2, 0.2, 1
+
+    BoxLayout:
+        size_hint_y: None
+        height: "40dp"
+        padding: "0dp", "5dp"
+        spacing: "10dp"
+
+        MDLabel:
+            text: "v1.0.0 | © 2023"
+            font_style: "Caption"
+            halign: "center"
+            color: 0.5, 0.5, 0.5, 1
+END_KV
+
+        # 创建 main.py 文件
+        cat > main.py << 'END_PY'
+import os
+import sys
+import io
+from contextlib import redirect_stdout
+from kivy.app import App
+from kivy.uix.boxlayout import BoxLayout
+from kivy.clock import Clock
+from kivy.core.window import Window
+from kivy.properties import StringProperty, NumericProperty
+from kivymd.toast import toast
+
+# 添加当前目录到模块搜索路径
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from 单人签到 import main as sign_main
+
+Window.clearcolor = (0.95, 0.95, 0.95, 1)
+
+class SignApp(App):
+    status_text = StringProperty('准备就绪')
+    progress_value = NumericProperty(0)
+    log_text = StringProperty('等待签到操作...')
+    
+    def build(self):
+        return BoxLayout()
+
+    def run_sign(self):
+        self.status_text = "正在签到中..."
+        self.progress_value = 30
+        self.log_text = ""
+        self.root.ids.sign_button.disabled = True
+        Clock.schedule_once(lambda dt: self.execute_sign(), 0.1)
+
+    def execute_sign(self):
+        f = io.StringIO()
+        with redirect_stdout(f):
+            try:
+                sign_main()
+                self.status_text = "签到完成！"
+                self.progress_value = 100
+                self.log_text = f.getvalue()
+                toast("签到成功")
+            except Exception as e:
+                self.status_text = "签到失败"
+                self.progress_value = 0
+                self.log_text = str(e)
+                toast(f"签到失败: {str(e)}")
+        self.root.ids.sign_button.disabled = False
+
+    def show_info(self):
+        toast("校园签到助手 v1.0\n支持蓝牙自动签到")
+
+if __name__ == '__main__':
+    SignApp().run()
+END_PY
+        
+    - name: Build APK
+      run: |
+        buildozer -v android debug
+        mv bin/*.apk .
+        
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: sign-helper-apk
+        path: ./*.apk
